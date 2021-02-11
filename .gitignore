@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+data/Synthetic PMU Data/
+
+data/ACTIVSg2000/
