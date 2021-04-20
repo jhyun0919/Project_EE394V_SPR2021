@@ -2,10 +2,10 @@
 
 ### ToDo List
 
-- Build data generator
-- EDA
-- Build GAT model
-- Train & Test
+- [ ] Build data generator
+- [ ] EDA
+- [ ] Build GAT model
+- [ ] Train & Test
 
 <br>
 
