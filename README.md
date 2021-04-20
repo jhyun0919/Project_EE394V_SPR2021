@@ -1,6 +1,6 @@
 # Porject_EE394V_SPR2021
 
-### ToDo List
+### Task List
 
 - [ ] Build data generator
 - [ ] EDA
