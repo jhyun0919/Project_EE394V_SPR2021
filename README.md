@@ -11,9 +11,9 @@
 
 ### Jupyter Notebooks
 
-- [Data Generation](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/data%20generation.ipynb)
+- [Data Generation](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generation/data%20generation.ipynb)
 
-- [EDA](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/eda.ipynb)
+- [EDA](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generation/eda.ipynb)
 
 - [Experiments](https://github.com/jhyun0919/Project_EE394V_SPR2021/tree/main/code/experiments)
 
@@ -21,7 +21,7 @@
 
 ### Codes
 
-- [Data Generator](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/data_generator.py)
+- [Data Generator](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generation/data_generator.py)
 
 - [Model Architecture](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/model%20architecture/model.py)
 
