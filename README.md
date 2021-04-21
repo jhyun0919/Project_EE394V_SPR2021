@@ -5,7 +5,7 @@
 - [ ] Build data generator
 - [ ] EDA
 - [ ] Build GAT model
-- [ ] Train & Test
+- [ ] Train & Test models
 
 <br>
 
