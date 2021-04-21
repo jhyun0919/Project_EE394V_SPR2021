@@ -2,7 +2,7 @@
 
 ### Task List
 
-- [ ] Build data generator
+- [x] Build data generator
 - [ ] EDA
 - [ ] Build GAT model
 - [ ] Train & Test models
@@ -11,19 +11,19 @@
 
 ### Jupyter Notebooks
 
-- [Data Generation]()
+- [Data Generation](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/data%20generation.ipynb)
 
-- [EDA]()
+- [EDA](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/eda.ipynb)
 
-- [Experiments]()
+- [Experiments](https://github.com/jhyun0919/Project_EE394V_SPR2021/tree/main/code/experiments)
 
 <br>
 
 ### Codes
 
-- [Data Generator]()
+- [Data Generator](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/data%20generator/data_generator.py)
 
-- [Model Architecture]()
+- [Model Architecture](https://github.com/jhyun0919/Project_EE394V_SPR2021/blob/main/code/model%20architecture/model.py)
 
 <br>
 
