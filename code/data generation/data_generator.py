@@ -5,77 +5,71 @@ from tqdm import trange
 import pickle
 
 
-def get_Pb_lim(Pg_lim, GB_map):
-    Pb_lim = {}
+def standardize_data_type(data, d_type="float64"):
+    for key_i in data.keys():
+        for key_j in data[key_i].keys():
+            data[key_i][key_j] = np.asarray(data[key_i][key_j], dtype=d_type)
 
-    for g_idx in range(len(GB_map)):
-        b_idx = GB_map[g_idx]
-        try:
-            Pb_lim[b_idx][0] = Pb_lim[b_idx][0] + Pg_lim[g_idx][0]
-            Pb_lim[b_idx][1] = Pb_lim[b_idx][1] + Pg_lim[g_idx][1]
-        except KeyError:
-            Pb_lim[b_idx] = np.zeros(2)
-            Pb_lim[b_idx][0] = Pg_lim[g_idx][0]
-            Pb_lim[b_idx][1] = Pg_lim[g_idx][1]
-    return Pb_lim
+    return data
 
 
-def get_Pb(Pg, GB_map):
-    Pb = {}
+def get_active_gen_constraints(data):
+    p_g = data["gen_info"]["p_g"]
+    p_g_lim = data["gen_info"]["p_g_lim"]
 
-    for g_idx in range(len(GB_map)):
-        b_idx = GB_map[g_idx]
-        try:
-            Pb[b_idx] = Pb[b_idx] + Pg[g_idx]
-        except KeyError:
-            Pb[b_idx] = Pg[g_idx]
-    return Pb
+    active_constraints = np.zeros_like(p_g_lim)
 
+    for g_idx in range(p_g_lim.shape[0]):
+        if p_g_lim[g_idx][0] != p_g_lim[g_idx][1]:
+            # max constraint
+            if p_g[g_idx] >= p_g_lim[g_idx][0]:
+                active_constraints[g_idx][0] = 1
+            # min constraint
+            if p_g[g_idx] <= p_g_lim[g_idx][1]:
+                active_constraints[g_idx][1] = 1
 
-def get_Pg_active_constraints(Pg, Pg_lim):
-    active_constraints = np.zeros((len(Pg), 2))
-
-    for g_idx in range(Pg_lim.shape[0]):
-        if Pg[g_idx] >= Pg_lim[g_idx][0]:
-            active_constraints[g_idx][0] = 1
-        if Pg[g_idx] <= Pg_lim[g_idx][1]:
-            active_constraints[g_idx][1] = 1
-
-    return np.sum(active_constraints, axis=1) % 2
+    return active_constraints
 
 
-def get_Pb_active_constraints(Pg, Pg_lim, GB_map):
-    Pb = get_Pb(Pg, GB_map)
-    Pb_lim = get_Pb_lim(Pg_lim, GB_map)
-    Bg_idx = list(Pb.keys())
-    active_constraints = np.zeros((len(Bg_idx), 2))
-    for i in range(len(Bg_idx)):
-        b_idx = Bg_idx[i]
-        if Pb[b_idx] >= Pb_lim[b_idx][0]:
-            active_constraints[i][0] = 1
-        if Pb[b_idx] <= Pb_lim[b_idx][1]:
-            active_constraints[i][1] = 1
-    return np.sum(active_constraints, axis=1) % 2
+def get_active_flow_constraints(data):
+    p_f = data["flow_info"]["p_f"]
+    p_f_lim = data["flow_info"]["p_f_lim"]
+
+    active_constraints = np.zeros_like(p_f_lim)
+
+    for f_idx in range(p_f_lim.shape[0]):
+        if p_f_lim[f_idx][0] != p_f_lim[f_idx][1]:
+            # max constraint
+            if p_f[f_idx] >= p_f_lim[f_idx][0]:
+                active_constraints[f_idx][0] = 1
+            # min constraint
+            if p_f[f_idx] <= p_f_lim[f_idx][1]:
+                active_constraints[f_idx][1] = 1
+
+    return active_constraints
 
 
-def get_F_active_constraints(F, F_lim):
-    active_constraints = []
-
-    for f, f_lim in zip(F, F_lim):
-        if abs(f) >= abs(f_lim):
-            active_constraints.append(1)
-        else:
-            active_constraints.append(0)
-
-    return np.array(active_constraints)
+def merge_active_constraints(gen_active, flow_active):
+    gen_active = gen_active.reshape(gen_active.shape[0] * 2)
+    flow_active = flow_active.reshape(flow_active.shape[0] * 2)
+    return np.hstack((gen_active, flow_active))
 
 
-def merge_active_constraints(Pg_active, Pb_active, F_active):
-    return np.array(list(Pg_active) + list(Pb_active) + list(F_active))
+def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
+    """
+    create a dataset by mat engine (matpower),
+    and return it.
 
+    Args:
+        test_case (str): a name of test case.
+        dataset_size (int): the size of the dataset.
+        std_scaler (float, optional): coefficient to scale the uncertainty. Defaults to 0.03.
 
-def create_dataset(file_name, dataset_size, std_scaler=0.03):
-    print("> creating dataset with {}".format(file_name))
+    Returns:
+        dict: the created dataset.
+    """
+    # create a dataset
+    print("> creating dataset with {}".format(test_case))
 
     x = []
     y = []
@@ -83,38 +77,44 @@ def create_dataset(file_name, dataset_size, std_scaler=0.03):
     org_dir = os.getcwd()
     os.chdir("./matpower7.1/")
 
+    # start mat-engine
     eng = matlab.engine.start_matlab()
 
-    data = eng.dc_opf_solver(file_name, 0.03)
+    for _ in trange(dataset_size):
+        # do opf solver
+        data = eng.dc_opf_solver(test_case, std_scaler)
+        data = standardize_data_type(data, d_type)
 
-    Pg = np.squeeze(np.array(data["Pg"]))
-    B_idx = np.squeeze(np.array(data["B_idx"]))
-    GB_map = np.squeeze(np.array(data["GB_map"])).astype(int)
-    F = np.squeeze(np.array(data["F"]))
-    Pg_lim = np.array(data["Pg_lim"])
-    F_lim = np.array(data["F_lim"])
-    w = np.squeeze(np.array(data["w"]))
-
-    for i in trange(dataset_size):
-        data = eng.dc_opf_solver(file_name, std_scaler)
         # assing x data
-        x.append(np.array(data["w"]))
+        x.append(data["w_info"]["w"].reshape(data["w_info"]["w"].shape[1]))
         # assgin y data
-        Pg_active = get_Pg_active_constraints(Pg, Pg_lim)
-        Pb_active = get_Pb_active_constraints(Pg, Pg_lim, GB_map)
-        F_active = get_F_active_constraints(F, F_lim)
-        active_constraints = merge_active_constraints(Pg_active, Pb_active, F_active)
-        y.append(np.array(active_constraints))
+        gen_active = get_active_gen_constraints(data)
+        flow_active = get_active_flow_constraints(data)
+        active_constraints = merge_active_constraints(gen_active, flow_active)
+        y.append(active_constraints)
+
+    g = {
+        "bus_idx": data["bus_info"]["bus_idx"].squeeze(),
+        "fbus2tbus": data["flow_info"]["bus2bus"],
+    }
 
     eng.quit()
-
     os.chdir(org_dir)
 
-    return {"x": np.squeeze(np.array(x)), "y": np.array(y)}
+    dataset = {"x": np.array(x), "y": np.array(y), "g": g}
+
+    return dataset
 
 
 def save_dataset(test_case, dataset, dataset_size):
-    print(os.chdir)
+    """
+    save the dataset to the designated directory.
+
+    Args:
+        test_case (str): a name of test case
+        dataset ([type]): a dataset
+        dataset_size (int): the size of the dataset
+    """
     file_name = test_case.split(".")[0]
     file_path = "./../../data/" + str(dataset_size)
 
@@ -128,6 +128,13 @@ def save_dataset(test_case, dataset, dataset_size):
 
 
 def build_datasets(test_cases, dataset_size):
+    """
+    build datasets for model training with test cases.
+
+    Args:
+        test_cases (list): names of test cases
+        dataset_size (int): dataset size
+    """
     for test_case in test_cases:
         # create a dataset
         dataset = create_dataset(test_case, dataset_size)

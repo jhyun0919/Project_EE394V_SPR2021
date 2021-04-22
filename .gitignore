@@ -173,3 +173,5 @@ code/data generation/matpower7.1/CITATION
 code/data generation/matpower7.1/.gitignore
 
 code/data generation/matpower7.1/.dockerignore
+
+etc/.DS_Store
