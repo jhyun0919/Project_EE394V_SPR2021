@@ -3,6 +3,10 @@ import os
 import numpy as np
 from tqdm import trange
 import pickle
+import matplotlib.pyplot as plt
+import networkx as nx
+
+plt.rcParams["figure.figsize"] = [12, 8]
 
 
 def standardize_data_type(data, d_type="float64"):
@@ -96,6 +100,7 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
     g = {
         "bus_idx": data["bus_info"]["bus_idx"].squeeze(),
         "fbus2tbus": data["flow_info"]["bus2bus"],
+        "gen_bus": data["gen_info"]["gen2bus"],
     }
 
     eng.quit()
@@ -106,7 +111,7 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
     return dataset
 
 
-def save_dataset(test_case, dataset, dataset_size):
+def save_dataset(test_case, dataset, dataset_size, std_scaler):
     """
     save the dataset to the designated directory.
 
@@ -116,18 +121,23 @@ def save_dataset(test_case, dataset, dataset_size):
         dataset_size (int): the size of the dataset
     """
     file_name = test_case.split(".")[0]
-    file_path = "./../../data/" + str(dataset_size)
 
-    if not os.path.isdir(file_path):
-        os.mkdir(file_path)
+    # file dir: data size
+    file_dir = "./../../data/size_" + str(dataset_size)
+    if not os.path.isdir(file_dir):
+        os.mkdir(file_dir)
+    # file dir: std
+    file_dir = file_dir + "/std_" + str(std_scaler)
+    if not os.path.isdir(file_dir):
+        os.mkdir(file_dir)
 
-    file_dir = os.path.join(file_path, file_name + ".pickle")
-    outfile = open(file_dir, "wb")
+    file_name = os.path.join(file_dir, file_name + ".pickle")
+    outfile = open(file_name, "wb")
     pickle.dump(dataset, outfile)
     outfile.close()
 
 
-def build_datasets(test_cases, dataset_size):
+def build_datasets(test_cases, dataset_size, std_scaler=0.03, d_type="float32"):
     """
     build datasets for model training with test cases.
 
@@ -137,6 +147,26 @@ def build_datasets(test_cases, dataset_size):
     """
     for test_case in test_cases:
         # create a dataset
-        dataset = create_dataset(test_case, dataset_size)
+        dataset = create_dataset(test_case, dataset_size, std_scaler, d_type)
         # save the dataset
-        save_dataset(test_case, dataset, dataset_size)
+        save_dataset(test_case, dataset, dataset_size, std_scaler)
+
+
+def plot_graph(g):
+    node_list = []
+    color_map = []
+    G = nx.Graph()
+    for bus_i in g["bus_idx"]:
+        node_list.append(bus_i)
+        if bus_i in g["gen_bus_idx"]:
+            color_map.append("red")
+        else:
+            color_map.append("green")
+    G.add_nodes_from(node_list)
+
+    for idx, f2t in enumerate(g["fbus2tbus"]):
+        G.add_edge(f2t[0], f2t[1], key=idx)
+
+    pos = nx.kamada_kawai_layout(G)
+    nx.draw_networkx(G, pos=pos, node_color=color_map)
+    plt.show()  # display
