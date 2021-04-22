@@ -60,18 +60,6 @@ def merge_active_constraints(gen_active, flow_active):
 
 
 def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
-    """
-    create a dataset by mat engine (matpower),
-    and return it.
-
-    Args:
-        test_case (str): a name of test case.
-        dataset_size (int): the size of the dataset.
-        std_scaler (float, optional): coefficient to scale the uncertainty. Defaults to 0.03.
-
-    Returns:
-        dict: the created dataset.
-    """
     # create a dataset
     print("> creating dataset with {}".format(test_case))
 
@@ -100,7 +88,7 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
     g = {
         "bus_idx": data["bus_info"]["bus_idx"].squeeze(),
         "fbus2tbus": data["flow_info"]["bus2bus"],
-        "gen_bus": data["gen_info"]["gen2bus"],
+        "gen_bus_idx": data["gen_info"]["gen2bus"],
     }
 
     eng.quit()
@@ -112,14 +100,6 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
 
 
 def save_dataset(test_case, dataset, dataset_size, std_scaler):
-    """
-    save the dataset to the designated directory.
-
-    Args:
-        test_case (str): a name of test case
-        dataset ([type]): a dataset
-        dataset_size (int): the size of the dataset
-    """
     file_name = test_case.split(".")[0]
 
     # file dir: data size
@@ -137,15 +117,12 @@ def save_dataset(test_case, dataset, dataset_size, std_scaler):
     outfile.close()
 
 
-def build_datasets(test_cases, dataset_size, std_scaler=0.03, d_type="float32"):
-    """
-    build datasets for model training with test cases.
-
-    Args:
-        test_cases (list): names of test cases
-        dataset_size (int): dataset size
-    """
+def build_datasets(
+    test_cases, dataset_size, std_scaler=0.03, d_type="float32", test_type="default"
+):
     for test_case in test_cases:
+        if test_type != "default":
+            test_case = test_case.split(".")[0] + "__" + test_type + ".m"
         # create a dataset
         dataset = create_dataset(test_case, dataset_size, std_scaler, d_type)
         # save the dataset
