@@ -3,7 +3,9 @@
 ### Task List
 
 - [x] Build data generator
-- [ ] EDA
+- [x] EDA
+- [x] Generate datasets for experiments
+- [ ] Build Dense model (baseline)
 - [ ] Build GAT model
 - [ ] Train & Test models
 
