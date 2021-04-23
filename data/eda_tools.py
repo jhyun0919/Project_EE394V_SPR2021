@@ -42,31 +42,32 @@ def plot_graph(g):
     for idx, f2t in enumerate(g["fbus2tbus"]):
         G.add_edge(f2t[0], f2t[1], key=idx)
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(8, 6))
+    plt.title("network representation as a graph")
     pos = nx.kamada_kawai_layout(G)
     nx.draw_networkx(G, pos=pos, node_color=color_map)
     plt.show()  # display
 
 
 def plot_dist_X(df):
-    plt.figure(figsize=(8, 20))
-    plt.title("feature distribution")
+    plt.figure(figsize=(8, 12))
+    plt.title("feature distributions")
     sns.violinplot(data=df, orient="h")
     plt.show()
 
 
-def plot_dist_Y(df, plot_title=None):
-    plt.figure(figsize=(12, 8))
+def plot_dist_Y(df):
+    plt.figure(figsize=(12, 6))
     plt.plot(df.sum(axis=0))
-    if plot_title is not None:
-        plt.title(plot_title)
+    plt.title("activeness counts")
     plt.show()
 
 
 def plot_two_dist_Ys(df_1, df_2, label_1, label_2, plot_title=None):
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 6))
     plt.plot(df_1.sum(axis=0), label=str(label_1))
-    plt.plot(df_2.sum(axis=0), label=str(label_2))
+    plt.plot(df_2.sum(axis=0), "--", label=str(label_2))
+    plt.ylim(0, 100)
     plt.legend()
     if plot_title is not None:
         plt.title(plot_title)
