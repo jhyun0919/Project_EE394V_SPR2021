@@ -48,7 +48,9 @@ function [output] = dc_opf_solver(data_name, scale)
     bus_info = struct('p_d', p_d, 'bus_idx', bus_idx);
     flow_info = struct('p_f', p_f, 'p_f_lim', p_f_lim, 'bus2bus', bus2bus);
     w_info = struct('w', W);
-    output = struct('bus_info', bus_info, 'gen_info', gen_info, 'flow_info', flow_info, 'w_info', w_info);
+    success = struct('success', results.success);
+
+    output = struct('bus_info', bus_info, 'gen_info', gen_info, 'flow_info', flow_info, 'w_info', w_info, 'success_info', success);
     % output = struct('mpc', mpc, 'results', results);
 
 end
