@@ -1,6 +1,8 @@
 import matlab.engine
 import os
 import numpy as np
+from numpy.lib.ufunclike import _fix_and_maybe_deprecate_out_named_y
+import pandas as pd
 from tqdm import trange
 import pickle
 import matplotlib.pyplot as plt
@@ -9,7 +11,7 @@ import networkx as nx
 plt.rcParams["figure.figsize"] = [12, 8]
 
 
-def standardize_data_type(data, d_type="float64"):
+def standardize_data_type(data, d_type="float32"):
     for key_i in data.keys():
         for key_j in data[key_i].keys():
             data[key_i][key_j] = np.asarray(data[key_i][key_j], dtype=d_type)
@@ -63,8 +65,8 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
     # create a dataset
     print("> creating dataset with {}".format(test_case))
 
-    x = []
-    y = []
+    # x = []
+    # y = []
 
     org_dir = os.getcwd()
     os.chdir("./matpower7.1/")
@@ -81,32 +83,30 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
                 break
 
         # assing x data
-        x.append(data["w_info"]["w"].reshape(data["w_info"]["w"].shape[1]))
+        x = data["w_info"]["w"].reshape(data["w_info"]["w"].shape[1])
         # assgin y data
         gen_active = get_active_gen_constraints(data)
         flow_active = get_active_flow_constraints(data)
         active_constraints = merge_active_constraints(gen_active, flow_active)
-        y.append(active_constraints)
+        y = active_constraints
+        # assign g data
+        g = {
+            "bus_idx": data["bus_info"]["bus_idx"].squeeze(),
+            "fbus2tbus": data["flow_info"]["bus2bus"],
+            "gen_bus_idx": data["gen_info"]["gen2bus"],
+        }
 
-    g = {
-        "bus_idx": data["bus_info"]["bus_idx"].squeeze(),
-        "fbus2tbus": data["flow_info"]["bus2bus"],
-        "gen_bus_idx": data["gen_info"]["gen2bus"],
-    }
+        save_dataset(x, y, g, test_case, dataset_size, std_scaler)
 
     eng.quit()
     os.chdir(org_dir)
 
-    dataset = {"x": np.array(x), "y": np.array(y), "g": g}
 
-    return dataset
-
-
-def save_dataset(test_case, dataset, dataset_size, std_scaler):
+def get_file_name(test_case, dataset_size, std_scaler):
     file_name = test_case.split(".")[0]
 
     # file dir: data size
-    file_dir = "./../../data/size_" + str(dataset_size)
+    file_dir = "./../../../data/size_" + str(dataset_size)
     if not os.path.isdir(file_dir):
         os.mkdir(file_dir)
     # file dir: std
@@ -114,10 +114,66 @@ def save_dataset(test_case, dataset, dataset_size, std_scaler):
     if not os.path.isdir(file_dir):
         os.mkdir(file_dir)
 
-    file_name = os.path.join(file_dir, file_name + ".pickle")
-    outfile = open(file_name, "wb")
-    pickle.dump(dataset, outfile)
+    file_name = os.path.join(file_dir, file_name)
+
+    return file_name
+
+
+def save_dataset(x, y, g, test_case, dataset_size, std_scaler):
+    file_name = get_file_name(test_case, dataset_size, std_scaler)
+
+    df_X = pd.DataFrame({"X": list(x)}).T
+    df_Y = pd.DataFrame({"Y": list(y)}).T
+
+    if os.path.isfile(file_name + "_feautre.csv"):
+        df_X.to_csv(file_name + "_feautre.csv", mode="a", header=False)
+        df_Y.to_csv(file_name + "_label.csv", mode="a", header=False)
+    else:
+        df_X.to_csv(file_name + "_feautre.csv", mode="w", header=False)
+        df_Y.to_csv(file_name + "_label.csv", mode="w", header=False)
+
+    outfile = open(file_name + "_graph.pickle", "wb")
+    pickle.dump(g, outfile)
     outfile.close()
+
+
+def load_dataset(
+    test_case,
+    dataset_size,
+    std_scaler,
+    test_type="default",
+    relative_dir="./../../",
+    d_type="float32",
+):
+    if test_type != "default":
+        test_case = test_case.split(".")[0] + "__" + test_type + ".m"
+    case_name = test_case.split(".")[0]
+
+    file_name = (
+        relative_dir
+        + "data/size_"
+        + str(dataset_size)
+        + "/std_"
+        + str(std_scaler)
+        + "/"
+        + case_name
+    )
+
+    df_X = pd.read_csv(file_name + "_feautre.csv", index_col=0, header=None)
+    x = df_X.to_numpy()
+    x = np.asarray(x, dtype=d_type)
+
+    df_Y = pd.read_csv(file_name + "_label.csv", index_col=0, header=None)
+    y = df_Y.to_numpy()
+    y = np.asarray(y, dtype=d_type)
+
+    infile = open(file_name + "_graph.pickle", "rb",)
+    g = pickle.load(infile)
+    infile.close()
+
+    dataset = {"x": x, "y": y, "g": g}
+
+    return dataset
 
 
 def build_datasets(
@@ -127,26 +183,7 @@ def build_datasets(
         if test_type != "default":
             test_case = test_case.split(".")[0] + "__" + test_type + ".m"
         # create a dataset
-        dataset = create_dataset(test_case, dataset_size, std_scaler, d_type)
+        create_dataset(test_case, dataset_size, std_scaler, d_type)
         # save the dataset
-        save_dataset(test_case, dataset, dataset_size, std_scaler)
+        # save_dataset(test_case, dataset, dataset_size, std_scaler)
 
-
-def plot_graph(g):
-    node_list = []
-    color_map = []
-    G = nx.Graph()
-    for bus_i in g["bus_idx"]:
-        node_list.append(bus_i)
-        if bus_i in g["gen_bus_idx"]:
-            color_map.append("red")
-        else:
-            color_map.append("green")
-    G.add_nodes_from(node_list)
-
-    for idx, f2t in enumerate(g["fbus2tbus"]):
-        G.add_edge(f2t[0], f2t[1], key=idx)
-
-    pos = nx.kamada_kawai_layout(G)
-    nx.draw_networkx(G, pos=pos, node_color=color_map)
-    plt.show()  # display
