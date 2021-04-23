@@ -74,8 +74,11 @@ def create_dataset(test_case, dataset_size, std_scaler=0.03, d_type="float32"):
 
     for _ in trange(dataset_size):
         # do opf solver
-        data = eng.dc_opf_solver(test_case, std_scaler)
-        data = standardize_data_type(data, d_type)
+        while True:
+            data = eng.dc_opf_solver(test_case, std_scaler)
+            data = standardize_data_type(data, d_type)
+            if data["success_info"]["success"] == 1:
+                break
 
         # assing x data
         x.append(data["w_info"]["w"].reshape(data["w_info"]["w"].shape[1]))
